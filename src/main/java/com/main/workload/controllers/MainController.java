@@ -3,6 +3,7 @@ package com.main.workload.controllers;
 import com.main.workload.exceptions.FileParsingException;
 import com.main.workload.services.WorkloadParserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,8 +25,8 @@ public class MainController {
         this.parserService = parserService;
     }
 
-    @Operation(summary = "Загрузить файл", description = "Загружает и обрабатывает файл с данными")
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Загрузить файл нагрузки")
     public ResponseEntity<String> handleFileUpload(
             @Parameter(description = "Файл для загрузки", required = true)
             @RequestParam("file") MultipartFile file) {
