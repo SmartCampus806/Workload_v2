@@ -5,8 +5,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
+@Repository
 public interface StudentsGroupRepository extends JpaRepository<StudentsGroup, Long> {
 
     @Modifying
@@ -18,4 +22,6 @@ public interface StudentsGroupRepository extends JpaRepository<StudentsGroup, Lo
         DO UPDATE SET students_count = EXCLUDED.students_count
         """, nativeQuery = true)
     void upsertByName(@Param("group") StudentsGroup group);
+
+    Optional<StudentsGroup> findByName(String name);
 }

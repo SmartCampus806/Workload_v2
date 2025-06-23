@@ -1,6 +1,7 @@
 package com.main.workload.controllers;
 
 import com.main.workload.exceptions.FileParsingException;
+import com.main.workload.services.WorkloadImportProcessor;
 import com.main.workload.services.WorkloadParserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -18,10 +19,10 @@ import java.io.IOException;
 @Tag(name = "Workload API", description = "API для загрузки и обработки файлов")
 public class MainController {
 
-    private final WorkloadParserService parserService;
+    private final WorkloadImportProcessor parserService;
 
     @Autowired
-    public MainController(WorkloadParserService parserService) {
+    public MainController(WorkloadImportProcessor parserService) {
         this.parserService = parserService;
     }
 

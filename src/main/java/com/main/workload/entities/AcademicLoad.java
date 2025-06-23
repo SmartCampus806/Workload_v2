@@ -16,11 +16,12 @@ public class AcademicLoad {
     private Long id;
 
     private String groupName;
-    private String subject;
-    private Integer course;
-    private Integer semester;
+    private String subject;   // группировка
+    private Integer course;   // убрать
+    private Integer semester; // группировка
     private Integer weeks;
     private String stream;
+    private String additionalStream;
     private Integer students;
 
     // Лекции
@@ -57,7 +58,7 @@ public class AcademicLoad {
     private Integer credit;   // Зачет
     private Integer exam;     // Экзамен
     private Integer srs;      // Самостоятельная работа студентов
-    private Integer practice; // Практика
+    private Integer practice; // Практика TODO: как обрабатываем (две практики)???
     private Integer diploma;  // Диплом
     private Integer other;    // Другое
 

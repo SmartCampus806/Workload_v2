@@ -17,35 +17,13 @@ import java.util.*;
 
 @Service
 public class WorkloadParserService {
-    private final AcademicLoadRepository academicLoadRepository;
-    private final StudentsGroupRepository studentsGroupRepository;
-
-    @Autowired
-    public WorkloadParserService(AcademicLoadRepository academicLoadRepository,
-                                 StudentsGroupRepository studentsGroupRepository) {
-        this.academicLoadRepository = academicLoadRepository;
-        this.studentsGroupRepository = studentsGroupRepository;
-    }
-
     private final Set<String> words = Set.of(
             "очная форма обучения", "Базовое высшее образование", "Осенний семестр", "Весенний семестр",
             "Специализированное высшее образование", "очно-заочная форма обучения", "Бакалавриат",
             "Специалитет", "Магистратура", "Итого по кафедре", "Факультет"
     );
 
-    public void process(@NonNull InputStream inputStream) {
-        Pair pair = parse(inputStream);
-        assert pair != null;
-
-        List<AcademicLoad> academicLoads = pair.getFirst();
-        List<StudentsGroup> studentsGroups = pair.getSecond();
-
-        studentsGroups.forEach(studentsGroupRepository::upsertByName);
-        academicLoads.forEach(academicLoadRepository::save);
-    }
-
-    private Pair parse(@NonNull InputStream inputStream) {
-        Map<String, StudentsGroup> groups = new HashMap<>();
+    public List<AcademicLoad> parse(@NonNull InputStream inputStream) {
         List<AcademicLoad> academicLoads = new ArrayList<>();
 
         try (Workbook workbook = new HSSFWorkbook(inputStream)) {
@@ -62,12 +40,8 @@ public class WorkloadParserService {
 
                         if (!isGroup(cellValue))
                             subject = cellValue;
-                        else {
+                        else
                             academicLoads.add(extractLoad(row, subject));
-                            if (groups.get(cellValue) == null)
-                                groups.put(cellValue, new StudentsGroup(cellValue, getNumericValue(14, row)));
-                        }
-
                     }
                 }
             }
@@ -75,7 +49,7 @@ public class WorkloadParserService {
             throw new FileParsingException("Ошибка при чтении Excel-файла, файл некоректен", e);
         }
 
-        return new Pair(academicLoads, groups.values().stream().toList());
+        return academicLoads;
     }
 
     private AcademicLoad extractLoad(Row row, String subject) {
@@ -86,6 +60,7 @@ public class WorkloadParserService {
                 .semester(getNumericValue(9, row))
                 .weeks(getNumericValue(10, row))
                 .stream(getStringValue(11, row))
+//                .additionalStream(getStringValue(13, row))
                 .students(getNumericValue(14, row))
                 .lecturesPlan(getNumericValue(16, row))
                 .lecturesLoad(getNumericValue(18, row))

@@ -2,13 +2,17 @@ package com.main.workload.entities;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Entity
-@Table( name = "students_group",
+@Table(name = "students_group",
         indexes = {
-            @Index(name = "idx_students_group_name", columnList = "name")
+                @Index(name = "idx_students_group_name", columnList = "name")
         })
 @Data
+@NoArgsConstructor
 public class StudentsGroup {
 
     @Id
@@ -17,12 +21,14 @@ public class StudentsGroup {
 
     @Column(unique = true)
     private String name;
-    private Integer students_count;
+
+    private Integer studentsCount;
+
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Workload> workloads;
 
     public StudentsGroup(String name, Integer students_count) {
         this.name = name;
-        this.students_count = students_count;
+        this.studentsCount = students_count;
     }
 }
-
-

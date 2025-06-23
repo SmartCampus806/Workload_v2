@@ -30,7 +30,11 @@ dependencies {
 	runtimeOnly("org.postgresql:postgresql")
 
 	// Excel
-	implementation("org.apache.poi:poi:5.2.5")           // для HSSFWorkbook (.xls)
+	implementation("org.apache.poi:poi:5.2.5")
+	implementation("org.apache.poi:poi-ooxml:5.2.3")
+	implementation("org.apache.poi:poi-ooxml-full:5.2.3")
+
+// для HSSFWorkbook (.xls)
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
