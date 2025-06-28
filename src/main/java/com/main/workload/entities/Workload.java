@@ -30,10 +30,13 @@ public class Workload {
     @JoinColumn(name = "group_id")
     private StudentsGroup group;
 
+    private Boolean active;
+
     public Workload(WorkloadType type, int workload, StudentsGroup group) {
         this.type = type;
         this.workload = workload;
         this.group = group;
+        this.active = true;
     }
 
     public enum WorkloadType {
@@ -49,5 +52,14 @@ public class Workload {
         OTHER,
         COURSE_WORK,
         COURSE_PROJECT
+    }
+
+    @Override
+    public String toString() {
+        return "Workload{" +
+                "id=" + id +
+                ", type=" + type +
+                ", workload=" + workload +
+                '}';
     }
 }

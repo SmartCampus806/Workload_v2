@@ -1,52 +1,74 @@
 package com.main.workload.services;
 
 import com.main.workload.entities.*;
-import com.main.workload.repositories.AcademicLoadRepository;
-import com.main.workload.repositories.LessonRepository;
-import com.main.workload.repositories.StudentsGroupRepository;
-import com.main.workload.repositories.WorkloadContainerRepository;
+import com.main.workload.repositories.*;
 import com.main.workload.utils.Pair;
 import io.swagger.v3.oas.annotations.servers.Server;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.lang.foreign.GroupLayout;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class WorkloadImportProcessor {
     private final StudentsGroupRepository studentsGroupRepository;
     private final WorkloadParserService workloadParserService;
     private final LessonRepository lessonRepository;
     private final WorkloadContainerRepository workloadContainerRepository;
+    private final WorkloadRepository workloadRepository;
 
     @Autowired
     public WorkloadImportProcessor(StudentsGroupRepository studentsGroupRepository,
                                    WorkloadParserService workloadParserService,
-                                   LessonRepository lessonRepository, WorkloadContainerRepository workloadContainerRepository) {
+                                   LessonRepository lessonRepository, WorkloadContainerRepository workloadContainerRepository, WorkloadRepository workloadRepository) {
         this.studentsGroupRepository = studentsGroupRepository;
         this.workloadParserService = workloadParserService;
         this.lessonRepository = lessonRepository;
         this.workloadContainerRepository = workloadContainerRepository;
+        this.workloadRepository = workloadRepository;
     }
 
     public void process(@NonNull InputStream inputStream) {
 
         List<AcademicLoad> academicLoads = workloadParserService.parse(inputStream);
+
+        log.info(String.valueOf(academicLoads == null ? 0 : academicLoads.stream()
+            .filter(Objects::nonNull)
+            .mapToInt(x ->
+                (x.getPracticalsLoad() != null ? x.getPracticalsLoad() : 0) +
+                (x.getLabsLoad() != null ? x.getLabsLoad() : 0) +
+                (x.getLecturesPlan() != null ? x.getLecturesPlan() : 0) +
+                (x.getCourseProject() != null ? x.getCourseProject() : 0) +
+                (x.getCourseWork() != null ? x.getCourseWork() : 0) +
+                (x.getCredit() != null ? x.getCredit() : 0) +
+                (x.getRating() != null ? x.getRating() : 0) +
+                (x.getExam() != null ? x.getExam() : 0) +
+                (x.getKsr() != null ? x.getKsr() : 0) +
+                (x.getOther() != null ? x.getOther() : 0) +
+                (x.getConsult() != null ? x.getConsult() : 0) +
+                (x.getDiploma() != null ? x.getDiploma() : 0)
+            )
+            .sum()
+        ));
         Map<String, StudentsGroup> studentsGroups = new HashMap<>();
 
         Map<WorkloadGroupingKey, List<AcademicLoad>> groupedWorkload = groupBySubjectAndSemester(academicLoads);
 
-        //TODO: удалить старые workload и workloadContainer
-        List<WorkloadContainer> containers = groupedWorkload.values().stream()
+        workloadRepository.deactivateAll();
+        List<WorkloadContainer> newContainers = groupedWorkload.values().stream()
                 .flatMap(obj -> makeWorkloadsFromAcademicLoad(obj, studentsGroups).stream())
                 .toList();
-
-        workloadContainerRepository.saveAll(containers);
+        workloadContainerRepository.saveAll(newContainers);
+        workloadRepository.deleteAllInactive();
+        workloadContainerRepository.deleteUnusedContainers();
     }
 
     private Map<WorkloadGroupingKey, List<AcademicLoad>> groupBySubjectAndSemester(List<AcademicLoad> academicLoads) {
@@ -65,18 +87,19 @@ public class WorkloadImportProcessor {
     private StudentsGroup checkGroup(String name, Integer students, Map<String, StudentsGroup> groups) {
         if (groups.containsKey(name))
             return groups.get(name);
-        
-        StudentsGroup group = studentsGroupRepository.findByName(name)
-                .orElse(studentsGroupRepository.save(new StudentsGroup(name, students)));
- 
-        if (!group.getStudentsCount().equals(students)) {
-            group.setStudentsCount(students);
-            group = studentsGroupRepository.save(group);
+
+        Optional<StudentsGroup> group = studentsGroupRepository.findByName(name);
+        if (group.isEmpty())
+            group = Optional.of(studentsGroupRepository.save(new StudentsGroup(name, students)));
+
+        if (!group.get().getStudentsCount().equals(students)) {
+            group.get().setStudentsCount(students);
+            group = Optional.of(studentsGroupRepository.save(group.get()));
         
         }
         
-        groups.put(group.getName(), group);
-        return group;
+        groups.put(group.get().getName(), group.get());
+        return group.get();
     }
     private List<WorkloadContainer> makeWorkloadsFromAcademicLoad(List<AcademicLoad> groupedAcademicLoads, Map<String, StudentsGroup> groupMap) {
         Lesson lesson = checkLesson(groupedAcademicLoads.getFirst().getSubject(), groupedAcademicLoads.getFirst().getSemester());
@@ -88,74 +111,132 @@ public class WorkloadImportProcessor {
             StudentsGroup group = checkGroup(academicLoad.getGroupName(), academicLoad.getStudents(), groupMap);
             
             if (academicLoad.getLecturesPlan() != null) {
-                var workload = new Workload(Workload.WorkloadType.LECTURE, academicLoad.getConsult(), group);
-                lectureContainer.getWorkloads().add(workload);
-                workload.setContainer(lectureContainer);
+                var exist = getExistContainer(lesson, academicLoad, group, academicLoad.getLecturesPlan(), Workload.WorkloadType.LECTURE);
+                if (exist.isPresent() && lectureContainer.getId() == null) {
+                    exist.get().getWorkloads().addAll(lectureContainer.getWorkloads());
+                    lectureContainer = exist.get();
+                }
+                var workload = new Workload(Workload.WorkloadType.LECTURE, academicLoad.getLecturesPlan(), group);
+                lectureContainer.addWorkload(workload);
             }
             if (academicLoad.getConsult() != null) {
+                var exist = getExistContainer(lesson, academicLoad, group, academicLoad.getConsult(), Workload.WorkloadType.CONSULT);
+                if (exist.isPresent() && lectureContainer.getId() == null) {
+                    lectureContainer.getWorkloads().forEach(x -> exist.get().addWorkload(x));
+                    lectureContainer = exist.get();
+                }
                 var workload = new Workload(Workload.WorkloadType.CONSULT, academicLoad.getConsult(), group);
-                lectureContainer.getWorkloads().add(workload);
-                workload.setContainer(lectureContainer);
+                lectureContainer.addWorkload(workload);
             }
             if (academicLoad.getRating() != null) {
+                var exist = getExistContainer(lesson, academicLoad, group, academicLoad.getRating(), Workload.WorkloadType.RATING);
+                if (exist.isPresent() && lectureContainer.getId() == null) {
+                    lectureContainer.getWorkloads().forEach(x -> exist.get().addWorkload(x));
+                    lectureContainer = exist.get();
+                }
                 var workload = new Workload(Workload.WorkloadType.RATING, academicLoad.getRating(), group);
-                lectureContainer.getWorkloads().add(workload);
-                workload.setContainer(lectureContainer);
+                lectureContainer.addWorkload(workload);
             }
             if (academicLoad.getCredit() != null) {
+                var exist = getExistContainer(lesson, academicLoad, group, academicLoad.getCredit(), Workload.WorkloadType.CREDIT);
+                if (exist.isPresent() && lectureContainer.getId() == null) {
+
+                    lectureContainer.getWorkloads().forEach(x -> exist.get().addWorkload(x));
+
+                    lectureContainer = exist.get();
+                }
                 var workload = new Workload(Workload.WorkloadType.CREDIT, academicLoad.getCredit(), group);
-                lectureContainer.getWorkloads().add(workload);
-                workload.setContainer(lectureContainer);
+                lectureContainer.addWorkload(workload);
             }
             if (academicLoad.getExam() != null) {
+                var exist = getExistContainer(lesson, academicLoad, group, academicLoad.getExam(), Workload.WorkloadType.EXAM);
+                if (exist.isPresent() && lectureContainer.getId() == null) {
+                    lectureContainer.getWorkloads().forEach(x -> exist.get().addWorkload(x));
+                    lectureContainer = exist.get();
+                }
                 var workload = new Workload(Workload.WorkloadType.EXAM, academicLoad.getExam(), group);
-                lectureContainer.getWorkloads().add(workload);
-                workload.setContainer(lectureContainer);
+                lectureContainer.addWorkload(workload);
             }
 
+            // Отдельная нагрузка
             List<Workload> tmpWorkloadList = new ArrayList<>();
             if (academicLoad.getLabsLoad() != null) {
-                var workload = new Workload(Workload.WorkloadType.LABORATORY_WORK, academicLoad.getLabsLoad(), group);
-                tmpWorkloadList.add(workload);
+                processWorkload(lesson, academicLoad,group,academicLoad.getLabsLoad(), Workload.WorkloadType.LABORATORY_WORK)
+                        .ifPresent(tmpWorkloadList::add);
             }
             if (academicLoad.getPracticalsLoad() != null) {
-                var workload = new Workload(Workload.WorkloadType.PRACTICE, academicLoad.getPracticalsLoad(), group);
-                tmpWorkloadList.add(workload);
+                processWorkload(lesson, academicLoad,group, academicLoad.getPracticalsLoad(), Workload.WorkloadType.PRACTICE)
+                        .ifPresent(tmpWorkloadList::add);
             }
             if (academicLoad.getCourseWork() != null) {
-                var workload = new Workload(Workload.WorkloadType.COURSE_WORK, academicLoad.getCourseWork(), group);
-                tmpWorkloadList.add(workload);
+                processWorkload(lesson, academicLoad,group, academicLoad.getCourseWork(), Workload.WorkloadType.COURSE_WORK)
+                        .ifPresent(tmpWorkloadList::add);
             }
             if (academicLoad.getCourseProject() != null) {
-                var workload = new Workload(Workload.WorkloadType.COURSE_PROJECT, academicLoad.getCourseProject(), group);
-                tmpWorkloadList.add(workload);
+                processWorkload(lesson, academicLoad,group, academicLoad.getCourseProject(), Workload.WorkloadType.COURSE_PROJECT)
+                        .ifPresent(tmpWorkloadList::add);
+
             }
 
             // TODO: Ручное распределение
             if (academicLoad.getDiploma() != null) {
-                var workload = new Workload(Workload.WorkloadType.DIPLOMA, academicLoad.getDiploma(), group);
-                tmpWorkloadList.add(workload);
+                processWorkload(lesson, academicLoad,group, academicLoad.getDiploma(), Workload.WorkloadType.DIPLOMA)
+                        .ifPresent(tmpWorkloadList::add);
             }
             if (academicLoad.getOther() != null) {
-                var workload = new Workload(Workload.WorkloadType.OTHER, academicLoad.getOther(), group);
-                tmpWorkloadList.add(workload);
+                processWorkload(lesson, academicLoad,group, academicLoad.getOther(), Workload.WorkloadType.OTHER)
+                        .ifPresent(tmpWorkloadList::add);
             }
             if (academicLoad.getKsr() != null) {
-                var workload = new Workload(Workload.WorkloadType.KSR, academicLoad.getKsr(), group);
-                tmpWorkloadList.add(workload);
+                processWorkload(lesson, academicLoad,group, academicLoad.getKsr(), Workload.WorkloadType.KSR)
+                        .ifPresent(tmpWorkloadList::add);
             }
 
             for (var workload : tmpWorkloadList) {
                 WorkloadContainer container = new WorkloadContainer(lesson);
-                container.setWorkloads(List.of(workload));
-                workload.setContainer(container);
+                container.addWorkload(workload);
                 res.add(container);
             }
         }
-        res.add(lectureContainer);
+
+        // Проверям что lectureContainer не пуст, так как может не быть лекций и тп
+        if (!lectureContainer.getWorkloads().isEmpty())
+            res.add(lectureContainer);
         return res;
     }
-    
+
+    private Optional<Workload> processWorkload(Lesson lesson, AcademicLoad academicLoad, StudentsGroup group, Integer workload, Workload.WorkloadType type) {
+        var existWorkload = workloadRepository.findByLessonAndWorkloadAndTypeAndGroup(lesson, workload,
+                type, group);
+        if(existWorkload.size() > 1) {
+            log.error("Ошибка при попытке поиска Workload составной ключ не уникален.\n" +
+                    "Workloads: {}, AcadecmicLoad: {}", existWorkload.stream().map(Workload::toString), academicLoad);
+            throw new RuntimeException("Ошибка при попытке поиска Workload составной ключ не уникален.");
+        }
+        if (existWorkload.isEmpty()) {
+            return Optional.of(new Workload(type, workload, group));
+        }
+        existWorkload.getFirst().setActive(true);
+        workloadRepository.save(existWorkload.getFirst());
+        return Optional.empty();
+    }
+
+    private Optional<WorkloadContainer> getExistContainer(@NonNull Lesson lesson, @NonNull AcademicLoad academicLoad, @NonNull StudentsGroup group, @NonNull Integer workload, @NonNull Workload.WorkloadType type) {
+        var existWorkload = workloadRepository.findByLessonAndWorkloadAndTypeAndGroup(lesson, workload,
+                type, group);
+
+        if (existWorkload.size() > 1) {
+            log.error("Ошибка при попытке поиска Workload составной ключ не уникален.\n" +
+                    "Workloads: {}, AcadecmicLoad: {}", existWorkload.stream().map(Workload::toString), academicLoad);
+            throw new RuntimeException("Ошибка при попытке поиска Workload составной ключ не уникален.");
+        }
+        if (existWorkload.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(existWorkload.getFirst().getContainer());
+
+    }
+
     @Data
     @AllArgsConstructor
     public class WorkloadGroupingKey {

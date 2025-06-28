@@ -3,6 +3,7 @@ package com.main.workload.entities;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import lombok.Setter;
 
 import java.util.ArrayList;
@@ -44,6 +45,10 @@ public class WorkloadContainer {
         return lectureWorkload + otherWorkload;
     }
 
+    public void addWorkload(@NonNull Workload workload) {
+        workloads.add(workload);
+        workload.setContainer(this);
+    }
     public WorkloadContainer(Lesson lesson) {
         this.lesson = lesson;
         this.workloads = new ArrayList<>();

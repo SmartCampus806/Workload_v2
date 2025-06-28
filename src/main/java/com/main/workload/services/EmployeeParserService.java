@@ -3,6 +3,7 @@ package com.main.workload.services;
 import com.main.workload.entities.*;
 import com.main.workload.repositories.EmployeePositionRepository;
 import com.main.workload.repositories.EmployeeRepository;
+import com.main.workload.utils.NameFormatter;
 import jakarta.transaction.Transactional;
 
 import lombok.NonNull;
@@ -38,8 +39,6 @@ public class EmployeeParserService {
             for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
                 if (row != null) {
-                    if (rowIndex == 97)
-                        log.error("ff");
                     try {
                         extractEmployee(row, employees);
                     }
@@ -97,7 +96,7 @@ public class EmployeeParserService {
     }
 
     private void extractEmployee(Row row, Map<String, Employee> employees) {
-        String employeeName = getStringValue(1, row);
+        String employeeName = NameFormatter.formatFullName(Objects.requireNonNull(getStringValue(1, row)));
         String typeOfEmployment = getStringValue(3, row);
 
         Employee employee = null;
@@ -110,8 +109,8 @@ public class EmployeeParserService {
         }
 
         employee.addPosition(new EmployeePosition(getDoubleValue(2, row),
-                getStringValue(4, row),
-                getStringValue(6, row)));
+                EmployeePosition.Post.fromDisplayName(getStringValue(4, row).trim()),
+                EmployeePosition.StructuralDivision.fromDisplayName(getStringValue(6, row))));
     }
 
     private Integer getNumericValue(@NonNull Integer cell, @NonNull Row row) {
@@ -124,9 +123,9 @@ public class EmployeeParserService {
     private String getStringValue(@NonNull Integer cell, @NonNull Row row) {
         Cell currentCell = row.getCell(cell);
         if (currentCell == null || currentCell.getCellType() == CellType.BLANK || currentCell.getCellType() == CellType.ERROR)
-            return null;
+            return "";
 
-        return isCellEmpty(currentCell) ? null : currentCell.getStringCellValue();
+        return isCellEmpty(currentCell) ? "" : currentCell.getStringCellValue();
     }
 
     private boolean isCellEmpty(Cell cell) {

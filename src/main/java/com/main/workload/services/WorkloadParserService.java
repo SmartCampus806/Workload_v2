@@ -39,7 +39,7 @@ public class WorkloadParserService {
                             continue;
 
                         if (!isGroup(cellValue))
-                            subject = cellValue;
+                            subject = cellValue.strip();
                         else
                             academicLoads.add(extractLoad(row, subject));
                     }
@@ -55,7 +55,7 @@ public class WorkloadParserService {
     private AcademicLoad extractLoad(Row row, String subject) {
         return AcademicLoad.builder()
                 .subject(subject)
-                .groupName(getStringValue(0, row))
+                .groupName(Objects.requireNonNull(getStringValue(0, row)).strip())
                 .course(getNumericValue(8, row))
                 .semester(getNumericValue(9, row))
                 .weeks(getNumericValue(10, row))
@@ -97,7 +97,7 @@ public class WorkloadParserService {
     }
 
     private boolean isGroup(@NonNull String input) {
-        String regex = "^[A-Za-zА-Яа-я][A-Za-zА-Яа-я0-9]{2}-\\d{3}.*$";
+        String regex = "^[A-Za-zА-Яа-я]\\d{1,2}[A-Za-zА-Яа-я]-\\d{3}.*$";
         return input.matches(regex);
     }
     private boolean containsAnyWord(String text) {

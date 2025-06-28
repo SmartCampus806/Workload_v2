@@ -27,6 +27,18 @@ public class Employee {
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EmployeePosition> positions;
 
+    @ManyToMany
+    @JoinTable(name = "employee_lesson", joinColumns = @JoinColumn(name = "employee_id"),
+            inverseJoinColumns = @JoinColumn(name = "lesson_id"))
+    private List<Lesson> availableLessons = new ArrayList<>();
+
+    public void addLesson(Lesson lesson) {
+        availableLessons.add(lesson);
+    }
+    public void addLessons(List<Lesson> lesson) {
+        availableLessons.addAll(lesson);
+    }
+
     public Employee(String name, String typeOfEmployment) {
         this.name = name;
         this.typeOfEmployment = typeOfEmployment;

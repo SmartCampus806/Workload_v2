@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -23,6 +24,13 @@ public class Lesson {
 
     @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkloadContainer> containers;
+
+    @ManyToMany(mappedBy = "availableLessons")
+    private List<Employee> qualifiedEmployees = new ArrayList<>();
+
+    public void addEmployee(Employee employee) {
+        qualifiedEmployees.add(employee);
+    }
 
     public Lesson(String name, Integer semester) {
         this.name = name;

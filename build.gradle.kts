@@ -34,7 +34,10 @@ dependencies {
 	implementation("org.apache.poi:poi-ooxml:5.2.3")
 	implementation("org.apache.poi:poi-ooxml-full:5.2.3")
 
-// для HSSFWorkbook (.xls)
+	// Распределение
+	implementation("org.ojalgo:ojalgo:53.0.0")
+
+	implementation("tech.ailef:snap-admin:0.2.1")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")

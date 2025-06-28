@@ -13,8 +13,8 @@ import java.util.Optional;
 @Repository
 public interface EmployeePositionRepository extends JpaRepository<EmployeePosition, Long> {
     Optional<EmployeePosition> findByIdAndStructuralDivision(Long id, String structuralDivision);
-    List<EmployeePosition> findAllByStructuralDivision(String structuralDivision);
-
+    List<EmployeePosition> findAllByStructuralDivision(EmployeePosition.StructuralDivision structuralDivision);
+    List<EmployeePosition> findByActiveTrueAndStructuralDivision(EmployeePosition.StructuralDivision division);
     @Modifying
     @Transactional
     @Query("UPDATE EmployeePosition e SET e.active = false")

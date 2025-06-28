@@ -16,9 +16,9 @@ public class AcademicLoad {
     private Long id;
 
     private String groupName;
-    private String subject;   // группировка
-    private Integer course;   // убрать
-    private Integer semester; // группировка
+    private String subject;
+    private Integer course;
+    private Integer semester;
     private Integer weeks;
     private String stream;
     private String additionalStream;
@@ -63,4 +63,36 @@ public class AcademicLoad {
     private Integer other;    // Другое
 
     private Integer total;    // Всего
+
+    @Override
+    public String toString() {
+        return "AcademicLoad{" +
+                ", groupName='" + groupName + '\'' +
+                ", subject='" + subject + '\'' +
+                ", course=" + course +
+                ", semester=" + semester +
+                ", weeks=" + weeks +
+                ", stream='" + stream + '\'' +
+                ", additionalStream='" + additionalStream + '\'' +
+                ", students=" + students +
+                ", lecturesPlan=" + lecturesPlan +
+                ", lecturesLoad=" + lecturesLoad +
+                ", practicalsGroup=" + practicalsGroup +
+                ", practicalsLoad=" + practicalsLoad +
+                ", labsGroup=" + labsGroup +
+                ", labsLoad=" + labsLoad +
+                ", courseWork=" + courseWork +
+                ", courseProject=" + courseProject +
+                ", ksr=" + ksr +
+                ", consult=" + consult +
+                ", rating=" + rating +
+                ", credit=" + credit +
+                ", exam=" + exam +
+                ", srs=" + srs +
+                ", practice=" + practice +
+                ", diploma=" + diploma +
+                ", other=" + other +
+                ", total=" + total +
+                '}';
+    }
 }

@@ -1,6 +1,7 @@
 package com.main.workload.controllers;
 
 import com.main.workload.exceptions.FileParsingException;
+import com.main.workload.services.CompetencyParserService;
 import com.main.workload.services.EmployeeParserService;
 import com.main.workload.services.WorkloadImportProcessor;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,11 +25,13 @@ import java.io.IOException;
 public class UploaderController {
     private final WorkloadImportProcessor parserService;
     private final EmployeeParserService employeeParserService;
+    private final CompetencyParserService competencyParserService;
 
     @Autowired
-    public UploaderController(WorkloadImportProcessor parserService, EmployeeParserService employeeParserService) {
+    public UploaderController(WorkloadImportProcessor parserService, EmployeeParserService employeeParserService, CompetencyParserService competencyParserService) {
         this.parserService = parserService;
         this.employeeParserService = employeeParserService;
+        this.competencyParserService = competencyParserService;
     }
 
     @PostMapping(value = "/workload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -73,4 +76,24 @@ public class UploaderController {
         }
     }
 
+    @PostMapping(value = "/competencies", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Загрузить файл компетенций")
+    public ResponseEntity<String> handleFileUploadCompetency(
+            @Parameter(description = "Файл для загрузки", required = true)
+            @RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Файл пустой");
+        }
+
+        try {
+            competencyParserService.parse(file.getInputStream());
+            return ResponseEntity.ok("Файл успешно обработан");
+        } catch (FileParsingException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Ошибка при обработке файла: " + e.getMessage());
+        }
+    }
 }
