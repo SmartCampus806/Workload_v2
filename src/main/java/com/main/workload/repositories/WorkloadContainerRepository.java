@@ -16,4 +16,9 @@ public interface WorkloadContainerRepository extends JpaRepository<WorkloadConta
     @Transactional
     @Query("DELETE FROM WorkloadContainer wc WHERE wc.id NOT IN (SELECT DISTINCT w.container.id FROM Workload w WHERE w.container IS NOT NULL)")
     void deleteUnusedContainers();
+
+    @Modifying
+    @Query("UPDATE WorkloadContainer wc SET wc.position = null")
+    void setAllPositionsToNull();
+
 }

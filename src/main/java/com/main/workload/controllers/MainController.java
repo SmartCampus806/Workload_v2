@@ -3,7 +3,6 @@ package com.main.workload.controllers;
 import com.main.workload.repositories.EmployeePositionRepository;
 import com.main.workload.repositories.WorkloadContainerRepository;
 import com.main.workload.services.distribution.WorkloadAssignmentManagerService;
-import com.main.workload.services.distribution.WorkloadDistributionService;
 import com.main.workload.services.distribution.WorkloadDistributionServiceGenetic;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MainController {
 
-    private final WorkloadDistributionService distributionService;
     private final EmployeePositionRepository employeePositionRepository;
     private final WorkloadContainerRepository workloadContainerRepository;
     private final WorkloadAssignmentManagerService workloadAssignmentManagerService;

@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional()
 public class WorkloadAssignmentManagerService {
 
     @Autowired
@@ -25,7 +25,7 @@ public class WorkloadAssignmentManagerService {
     private EmployeePositionRepository employeePositionRepository;
 
     @Autowired
-    private WorkloadDistributionServiceGenetic workloadDistributionService2;
+    private WorkloadDistributionServiceGenetic workloadDistributionServiceGenetic;
 
     @Data
     public static class DistributionResult {
@@ -52,6 +52,9 @@ public class WorkloadAssignmentManagerService {
     );
 
     public DistributionResult assignWorkload() {
+
+        workloadContainerRepository.setAllPositionsToNull();
+
         // Получаем данные из базы
         List<WorkloadContainer> containers = workloadContainerRepository.findAll().stream()
                 .filter(x -> !x.getLesson().getQualifiedEmployees().isEmpty())
@@ -70,7 +73,15 @@ public class WorkloadAssignmentManagerService {
 
         // Вызываем метод распределения
         List<WorkloadDistributionServiceGenetic.WorkloadAssignment> assignments =
-                workloadDistributionService2.distributeWorkload(containers, positions);
+                workloadDistributionServiceGenetic.distributeWorkload(containers, positions);
+
+        // Cохраняем результат
+        List<WorkloadContainer> updatedContainers = assignments.stream().map(x -> {
+            WorkloadContainer container = x.getContainer();
+            container.setPosition(x.getPosition());
+            return container;
+            }).toList();
+        workloadContainerRepository.saveAll(updatedContainers);
 
         // Оцениваем качество распределения
         DistributionQuality quality = evaluateQuality(assignments, positions);
