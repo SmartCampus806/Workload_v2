@@ -21,4 +21,11 @@ public interface WorkloadContainerRepository extends JpaRepository<WorkloadConta
     @Query("UPDATE WorkloadContainer wc SET wc.position = null")
     void setAllPositionsToNull();
 
+    @Query("SELECT DISTINCT wc FROM WorkloadContainer wc " +
+            "LEFT JOIN FETCH wc.lesson " +
+            "LEFT JOIN FETCH wc.position p " +
+            "LEFT JOIN FETCH p.employee " +
+            "LEFT JOIN FETCH wc.workloads w " +
+            "LEFT JOIN FETCH w.group")
+    List<WorkloadContainer> findAllWithAssociations();
 }

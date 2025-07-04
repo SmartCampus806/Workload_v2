@@ -39,19 +39,26 @@ public class Workload {
         this.active = true;
     }
 
+    @Getter
     public enum WorkloadType {
-        LECTURE,
-        PRACTICE,
-        LABORATORY_WORK,
-        EXAM,
-        RATING,
-        CREDIT,
-        CONSULT,
-        KSR,
-        DIPLOMA,
-        OTHER,
-        COURSE_WORK,
-        COURSE_PROJECT
+        LECTURE("Лекция"),
+        PRACTICE("Практика"),
+        LABORATORY_WORK("Лабораторная работа"),
+        EXAM("Экзамен"),
+        RATING("Рейтинг"),
+        CREDIT("Зачет"),
+        CONSULT("Консультация"),
+        KSR("КСР"),
+        DIPLOMA("Диплом"),
+        OTHER("Другое"),
+        COURSE_WORK("Курсовая работа"),
+        COURSE_PROJECT("Курсовой проект");
+
+        private final String translation;
+
+        WorkloadType(String translation) {
+            this.translation = translation;
+        }
     }
 
     @Override
